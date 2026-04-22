@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { TONE_CONFIGS } from "@/lib/constants"
@@ -99,9 +100,13 @@ function ShellInner({ children }: { children: React.ReactNode }) {
           className="flex items-center gap-2.5 select-none"
           aria-label="CreativeFlow home"
         >
-          <span style={{ color: "var(--cf-text-inv)" }}>
-            <IconFlow />
-          </span>
+          <Image
+            src="/flow-logo.svg"
+            alt="CreativeFlow logo"
+            width={24}
+            height={34}
+            priority
+          />
           <span
             className="text-sm font-semibold tracking-[0.12em] uppercase"
             style={{ color: "var(--cf-text-inv)", letterSpacing: "0.14em" }}
