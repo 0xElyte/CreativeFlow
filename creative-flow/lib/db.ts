@@ -1,7 +1,6 @@
 import { openDB, type IDBPDatabase } from "idb"
 import type { TodoItem } from "./types"
 
-const DB_NAME = "creative-flow"
 const DB_VERSION = 1
 const TASKS_STORE = "tasks"
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1_000
@@ -13,29 +12,32 @@ interface CreativeFlowSchema {
   }
 }
 
-let dbPromise: Promise<IDBPDatabase<CreativeFlowSchema>> | null = null
+/** One cached DB connection per userId — avoids re-opening on every call. */
+const dbCache = new Map<string, Promise<IDBPDatabase<CreativeFlowSchema>>>()
 
-function getDB() {
-  if (!dbPromise) {
-    dbPromise = openDB<CreativeFlowSchema>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        if (!db.objectStoreNames.contains(TASKS_STORE)) {
-          db.createObjectStore(TASKS_STORE, { keyPath: "id" })
-        }
-      },
-    })
+function getDB(userId: string) {
+  if (!dbCache.has(userId)) {
+    dbCache.set(
+      userId,
+      openDB<CreativeFlowSchema>(`creative-flow-${userId}`, DB_VERSION, {
+        upgrade(db) {
+          if (!db.objectStoreNames.contains(TASKS_STORE)) {
+            db.createObjectStore(TASKS_STORE, { keyPath: "id" })
+          }
+        },
+      })
+    )
   }
-  return dbPromise
+  return dbCache.get(userId)!
 }
 
 /**
- * Reads all tasks from IndexedDB, purges entries older than 30 days, and
- * returns the fresh set. Safe to call on mount — errors are swallowed so a
- * missing/blocked DB never crashes the app.
+ * Reads all tasks from the user's IndexedDB, purges entries older than 30 days,
+ * and returns the fresh set. Safe to call on mount — errors are swallowed.
  */
-export async function hydrateFromDB(): Promise<TodoItem[]> {
+export async function hydrateFromDB(userId: string): Promise<TodoItem[]> {
   try {
-    const db = await getDB()
+    const db = await getDB(userId)
     const all = await db.getAll(TASKS_STORE)
     const cutoff = Date.now() - THIRTY_DAYS
     const fresh = all.filter((t) => t.updatedAt > cutoff)
@@ -52,13 +54,13 @@ export async function hydrateFromDB(): Promise<TodoItem[]> {
 }
 
 /**
- * Writes the full task list to IndexedDB via a single transaction.
+ * Writes the full task list to the user's IndexedDB via a single transaction.
  * Uses requestIdleCallback when available to avoid blocking the main thread.
  */
-export function persistToDB(tasks: TodoItem[]): void {
+export function persistToDB(tasks: TodoItem[], userId: string): void {
   const write = async () => {
     try {
-      const db = await getDB()
+      const db = await getDB(userId)
       const tx = db.transaction(TASKS_STORE, "readwrite")
       await Promise.all(tasks.map((t) => tx.store.put(t)))
       await tx.done
