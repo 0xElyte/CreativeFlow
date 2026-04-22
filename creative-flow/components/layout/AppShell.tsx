@@ -3,9 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { UserButton, useUser } from "@clerk/nextjs"
-import { TONE_CONFIGS } from "@/lib/constants"
-import { useStore } from "@/lib/store"
+import { useUser, useClerk } from "@clerk/nextjs"
 import StoreHydrationProvider from "@/components/providers/StoreHydrationProvider"
 import ElevenLabsProvider from "@/components/providers/ElevenLabsProvider"
 import { AuthSyncProvider } from "@/components/providers/AuthSyncProvider"
@@ -58,6 +56,27 @@ function IconUser() {
   )
 }
 
+function LogOutIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path
+        d="M5 12H2.5A1.5 1.5 0 011 10.5v-7A1.5 1.5 0 012.5 2H5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9.5 10L13 7l-3.5-3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M13 7H5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function IconFlow() {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
@@ -83,8 +102,8 @@ const NAV_ITEMS = [
 /* ─── Shell inner (uses hooks, must be inside providers) ─── */
 function ShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const toneProfile = useStore((s) => s.audio.toneProfile)
   const { user } = useUser()
+  const { signOut } = useClerk()
 
   return (
     <div className="h-full flex flex-col" style={{ background: "var(--cf-bg)" }}>
@@ -118,7 +137,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
 
-        {/* Profile pill */}
+        {/* Top-right: user name + logout */}
         <div className="flex items-center gap-3">
           {user?.firstName && (
             <span
@@ -128,19 +147,26 @@ function ShellInner({ children }: { children: React.ReactNode }) {
               {user.firstName}
             </span>
           )}
-          <span
-            className="text-sm font-medium"
-            style={{ color: "var(--cf-text-inv-2)" }}
-          >
-            {TONE_CONFIGS[toneProfile].label}
-          </span>
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: "w-8 h-8",
-              },
+          <button
+            onClick={() => signOut({ redirectUrl: "/sign-in" })}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-150 cursor-pointer"
+            style={{
+              color: "var(--cf-text-inv-2)",
+              background: "transparent",
+              border: "1px solid var(--cf-bg-border)",
             }}
-          />
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--cf-text-inv)"
+              e.currentTarget.style.borderColor = "var(--cf-text-inv-2)"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "var(--cf-text-inv-2)"
+              e.currentTarget.style.borderColor = "var(--cf-bg-border)"
+            }}
+          >
+            <LogOutIcon />
+            Log out
+          </button>
         </div>
       </header>
 
