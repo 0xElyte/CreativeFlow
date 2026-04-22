@@ -137,8 +137,33 @@ function ShellInner({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
 
-        {/* Top-right: user name + logout */}
+        {/* Top-right: avatar + user name + logout */}
         <div className="flex items-center gap-3">
+          {/* Avatar: photo or initials fallback */}
+          {user?.imageUrl ? (
+            <Image
+              src={user.imageUrl}
+              alt={user.firstName ?? "User avatar"}
+              width={30}
+              height={30}
+              className="rounded-full flex-shrink-0"
+              style={{ border: "1.5px solid var(--cf-bg-border)" }}
+            />
+          ) : user?.firstName ? (
+            <div
+              className="flex items-center justify-center rounded-full flex-shrink-0 text-xs font-semibold"
+              style={{
+                width: 30,
+                height: 30,
+                background: "var(--cf-bg-raised)",
+                color: "var(--cf-text-inv)",
+                border: "1.5px solid var(--cf-bg-border)",
+              }}
+            >
+              {user.firstName[0].toUpperCase()}
+            </div>
+          ) : null}
+
           {user?.firstName && (
             <span
               className="text-sm font-medium hidden sm:block"
