@@ -10,6 +10,8 @@ const QuerySchema = z.object({
   context: z.enum(["new_goal", "progress_update"]),
   profile: z.enum(["calm_mentor", "hype_coach", "gentle_guide"]),
   todoId: z.string().optional(),
+  goal: z.string().optional(),
+  steps: z.string().optional(),
 })
 
 /* ─── Route handler ──────────────────────────────────────── */
@@ -29,7 +31,7 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     )
   }
-  const { context, profile, todoId } = parsed.data
+  const { context, profile, todoId, goal, steps } = parsed.data
   const toneConfig = TONE_CONFIGS[profile as ToneProfile]
 
   /* 3.1: Fetch WebRTC token from ElevenLabs */
@@ -86,6 +88,12 @@ export async function GET(req: NextRequest) {
   }
   if (previousSessionsSummary) {
     dynamicVariables.previous_sessions_summary = previousSessionsSummary
+  }
+  if (goal) {
+    dynamicVariables.goal = goal
+  }
+  if (steps) {
+    dynamicVariables.steps = steps
   }
   // For progress_update, todoId carries the task context
   if (context === "progress_update" && todoId) {

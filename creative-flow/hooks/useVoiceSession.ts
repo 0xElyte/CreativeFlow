@@ -54,6 +54,7 @@ export function useVoiceSession(): UseVoiceSessionReturn {
   const setAudioPlaying = useStore((s) => s.setAudioPlaying)
   const userId = useStore((s) => s.session.userId)
   const toneProfile = useStore((s) => s.audio.toneProfile)
+  const tasks = useStore((s) => s.tasks)
 
   useEffect(() => {
     if (status === "disconnected" || status === "error") {
@@ -73,7 +74,22 @@ export function useVoiceSession(): UseVoiceSessionReturn {
 
       // Build token request URL (userId comes from Clerk auth server-side)
       const params = new URLSearchParams({ context, profile: toneProfile })
-      if (todoId) params.set("todoId", todoId)
+      if (todoId) {
+        params.set("todoId", todoId)
+        // For progress_update, pass goal + serialised steps so the agent has full context
+        const todo = tasks.find((t) => t.id === todoId)
+        if (todo) {
+          params.set("goal", todo.goal)
+          // Format: "1. [stepId] Step text (status: pending, ~15min)"
+          const stepsStr = todo.steps
+            .map(
+              (s, i) =>
+                `${i + 1}. [${s.id}] ${s.text} (status: ${s.status}, ~${s.estimatedMinutes}min)`
+            )
+            .join("\n")
+          params.set("steps", stepsStr)
+        }
+      }
 
       let tokenData: ConversationTokenResponse
       try {
@@ -114,7 +130,7 @@ export function useVoiceSession(): UseVoiceSessionReturn {
         },
       })
     },
-    [startSession, toneProfile, userId, setAudioPlaying]
+    [startSession, toneProfile, userId, tasks, setAudioPlaying]
   )
 
   /* ── Stop session ── */
