@@ -1,26 +1,91 @@
 @import "tailwindcss";
 
+/* ─── Design Tokens ─────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* App shell surfaces */
+  --cf-bg:          oklch(13% 0.01 278);
+  --cf-bg-raised:   oklch(18% 0.012 278);
+  --cf-bg-border:   oklch(25% 0.015 278);
+
+  /* Content surfaces */
+  --cf-surface:     oklch(97.5% 0.003 278);
+  --cf-card:        oklch(100% 0 0);
+  --cf-card-border: oklch(90% 0.006 278);
+
+  /* Typography */
+  --cf-text-1:      oklch(14% 0.008 278);
+  --cf-text-2:      oklch(42% 0.012 278);
+  --cf-text-3:      oklch(60% 0.01  278);
+  --cf-text-inv:    oklch(93% 0.005 278);
+  --cf-text-inv-2:  oklch(62% 0.01  278);
+
+  /* Accents */
+  --cf-amber:       oklch(73% 0.17  55);
+  --cf-amber-track: oklch(93% 0.04  55);
+  --cf-violet:      oklch(54% 0.19 295);
+  --cf-violet-track:oklch(93% 0.04 295);
+  --cf-coral:       oklch(65% 0.22  30);
+  --cf-coral-track: oklch(93% 0.04  30);
+
+  /* Spatial scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--cf-bg);
+  --color-foreground: var(--cf-text-1);
+  --font-sans:        var(--font-geist-sans);
+  --font-display:     var(--font-manrope);
+  --font-mono:        var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base ───────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--cf-bg);
+  color: var(--cf-text-1);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Scrollbars ─────────────────────────────────────────── */
+::-webkit-scrollbar          { width: 6px; height: 6px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--cf-bg-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(35% 0.015 278); }
+
+/* ─── Focus ring ─────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--cf-amber);
+  outline-offset: 2px;
+}
+
+/* ─── Reduced motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
