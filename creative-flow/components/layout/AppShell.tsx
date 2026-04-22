@@ -3,10 +3,12 @@
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { UserButton, useUser } from "@clerk/nextjs"
 import { TONE_CONFIGS } from "@/lib/constants"
 import { useStore } from "@/lib/store"
 import StoreHydrationProvider from "@/components/providers/StoreHydrationProvider"
 import ElevenLabsProvider from "@/components/providers/ElevenLabsProvider"
+import { AuthSyncProvider } from "@/components/providers/AuthSyncProvider"
 
 /* ─── Inline SVG icons ───────────────────────────────────── */
 function IconGrid() {
@@ -82,6 +84,7 @@ const NAV_ITEMS = [
 function ShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const toneProfile = useStore((s) => s.audio.toneProfile)
+  const { user } = useUser()
 
   return (
     <div className="h-full flex flex-col" style={{ background: "var(--cf-bg)" }}>
@@ -117,23 +120,27 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 
         {/* Profile pill */}
         <div className="flex items-center gap-3">
+          {user?.firstName && (
+            <span
+              className="text-sm font-medium hidden sm:block"
+              style={{ color: "var(--cf-text-inv-2)" }}
+            >
+              {user.firstName}
+            </span>
+          )}
           <span
             className="text-sm font-medium"
             style={{ color: "var(--cf-text-inv-2)" }}
           >
             {TONE_CONFIGS[toneProfile].label}
           </span>
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold"
-            style={{
-              background: "var(--cf-bg-raised)",
-              color: "var(--cf-text-inv)",
-              border: "1.5px solid var(--cf-bg-border)",
+          <UserButton
+            appearance={{
+              elements: {
+                avatarBox: "w-8 h-8",
+              },
             }}
-            aria-label="User profile"
-          >
-            A
-          </div>
+          />
         </div>
       </header>
 
@@ -186,7 +193,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ElevenLabsProvider>
       <StoreHydrationProvider>
-        <ShellInner>{children}</ShellInner>
+        <AuthSyncProvider>
+          <ShellInner>{children}</ShellInner>
+        </AuthSyncProvider>
       </StoreHydrationProvider>
     </ElevenLabsProvider>
   )

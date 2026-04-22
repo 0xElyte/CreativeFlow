@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono, Manrope } from "next/font/google"
+import { ClerkProvider } from "@clerk/nextjs"
 import "./globals.css"
-import AppShell from "@/components/layout/AppShell"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,13 +39,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} h-full`}
-    >
-      <body className="h-full">
-        <AppShell>{children}</AppShell>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html
+        lang="en"
+        className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} h-full`}
+      >
+        <body className="h-full">
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

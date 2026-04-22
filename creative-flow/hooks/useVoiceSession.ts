@@ -71,8 +71,8 @@ export function useVoiceSession(): UseVoiceSessionReturn {
     async (context: SessionContext, todoId?: string) => {
       setError(null)
 
-      // Build token request URL
-      const params = new URLSearchParams({ context, profile: toneProfile, userId })
+      // Build token request URL (userId comes from Clerk auth server-side)
+      const params = new URLSearchParams({ context, profile: toneProfile })
       if (todoId) params.set("todoId", todoId)
 
       let tokenData: ConversationTokenResponse

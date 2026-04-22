@@ -1,6 +1,8 @@
 "use client"
 
+import Image from "next/image"
 import { motion } from "framer-motion"
+import { useUser } from "@clerk/nextjs"
 import ToneProfileSelector from "@/components/profile/ToneProfileSelector"
 import { useStore } from "@/lib/store"
 
@@ -62,7 +64,12 @@ function NotifRow({ label, description }: { label: string; description: string }
 
 /* ─── Profile page ───────────────────────────────────────── */
 export default function ProfilePage() {
+  const { user } = useUser()
   const userId = useStore((s) => s.session.userId)
+
+  const displayName = user?.fullName ?? user?.firstName ?? "You"
+  const initials = (user?.firstName?.[0] ?? "?") + (user?.lastName?.[0] ?? "")
+  const email = user?.primaryEmailAddress?.emailAddress
 
   return (
     <div
@@ -71,17 +78,28 @@ export default function ProfilePage() {
     >
       {/* Header */}
       <header className="mb-10 flex items-center gap-5">
-        <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold flex-shrink-0"
-          style={{
-            background: "var(--cf-card)",
-            border: "1.5px solid var(--cf-card-border)",
-            color: "var(--cf-text-1)",
-          }}
-          aria-hidden
-        >
-          A
-        </div>
+        {user?.imageUrl ? (
+          <Image
+            src={user.imageUrl}
+            alt={displayName}
+            width={64}
+            height={64}
+            className="rounded-2xl flex-shrink-0"
+            style={{ border: "1.5px solid var(--cf-card-border)" }}
+          />
+        ) : (
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold flex-shrink-0"
+            style={{
+              background: "var(--cf-card)",
+              border: "1.5px solid var(--cf-card-border)",
+              color: "var(--cf-text-1)",
+            }}
+            aria-hidden
+          >
+            {initials}
+          </div>
+        )}
         <div className="flex flex-col gap-1">
           <h1
             className="font-bold leading-tight"
@@ -91,8 +109,13 @@ export default function ProfilePage() {
               color: "var(--cf-text-1)",
             }}
           >
-            Alex
+            {displayName}
           </h1>
+          {email && (
+            <p className="text-xs" style={{ color: "var(--cf-text-3)" }}>
+              {email}
+            </p>
+          )}
           {userId && (
             <p className="text-xs font-mono" style={{ color: "var(--cf-text-3)" }}>
               ID: {userId.slice(0, 8)}&hellip;

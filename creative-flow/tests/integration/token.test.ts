@@ -4,16 +4,28 @@
  *
  * Mocks @/lib/redis (local module — reliably intercepted by Vitest)
  * rather than ioredis (third-party package — tricky to mock in Node env).
+ * Mocks @clerk/nextjs/server so auth() returns a test userId.
  */
 
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { NextRequest } from "next/server"
 
-/* ─── Shared Redis mock state ────────────────────────────── */
+/* ─── Shared mock state ──────────────────────────────────── */
 const redisMockState = {
   getReturn: null as string | null | Error,
 }
+
+const TEST_USER_ID = "550e8400-e29b-41d4-a716-446655440000"
+
+const clerkMockState = {
+  userId: TEST_USER_ID as string | null,
+}
+
+/* ─── Mocks (must be before dynamic imports) ─────────────── */
+vi.mock("@clerk/nextjs/server", () => ({
+  auth: vi.fn(async () => ({ userId: clerkMockState.userId })),
+}))
 
 vi.mock("@/lib/redis", () => ({
   getRedisClient: () => ({
@@ -28,7 +40,8 @@ vi.mock("@/lib/redis", () => ({
 import { GET } from "@/app/api/conversation/token/route"
 
 /* ─── Helpers ────────────────────────────────────────────── */
-const VALID_USER_ID = "550e8400-e29b-41d4-a716-446655440000"
+// VALID_USER_ID now comes from clerkMockState — kept for Redis key assertions
+const VALID_USER_ID = TEST_USER_ID
 
 function makeUrl(params: Record<string, string>) {
   const url = new URL("http://localhost/api/conversation/token")
@@ -42,6 +55,7 @@ function makeReq(params: Record<string, string>) {
 /* ─── Setup ──────────────────────────────────────────────── */
 beforeEach(() => {
   redisMockState.getReturn = null
+  clerkMockState.userId = TEST_USER_ID
   process.env.ELEVENLABS_API_KEY = "test-api-key"
   process.env.ELEVENLABS_AGENT_ID = "test-agent-id"
   process.env.REDIS_URL = "redis://localhost:6379"
@@ -64,7 +78,7 @@ afterEach(() => {
 describe("GET /api/conversation/token", () => {
   describe("valid request — new_goal context", () => {
     it("returns 200 with conversationToken and dynamicVariables", async () => {
-      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor" }))
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.conversationToken).toBe("test-conversation-token")
@@ -74,19 +88,19 @@ describe("GET /api/conversation/token", () => {
     })
 
     it("sets Cache-Control: no-store header", async () => {
-      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor" }))
       expect(res.headers.get("Cache-Control")).toBe("no-store")
     })
 
     it("sets X-Content-Type-Options: nosniff header", async () => {
-      const res = await GET(makeReq({ context: "new_goal", profile: "hype_coach", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "new_goal", profile: "hype_coach" }))
       expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff")
     })
   })
 
   describe("valid request — progress_update context", () => {
     it("includes todo_id in dynamicVariables when provided", async () => {
-      const res = await GET(makeReq({ context: "progress_update", profile: "gentle_guide", userId: VALID_USER_ID, todoId: "todo-abc-123" }))
+      const res = await GET(makeReq({ context: "progress_update", profile: "gentle_guide", todoId: "todo-abc-123" }))
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.dynamicVariables.context).toBe("progress_update")
@@ -94,7 +108,7 @@ describe("GET /api/conversation/token", () => {
     })
 
     it("omits todo_id when not provided", async () => {
-      const res = await GET(makeReq({ context: "progress_update", profile: "calm_mentor", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "progress_update", profile: "calm_mentor" }))
       const body = await res.json()
       expect(body.dynamicVariables.todo_id).toBeUndefined()
     })
@@ -108,7 +122,7 @@ describe("GET /api/conversation/token", () => {
         conversation_id: "conv-123",
         timestamp: Date.now(),
       })
-      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor" }))
       const body = await res.json()
       expect(body.dynamicVariables.previous_sessions_summary).toBe(
         "Last session: user completed 2 steps of a fitness goal."
@@ -117,40 +131,43 @@ describe("GET /api/conversation/token", () => {
 
     it("omits previous_sessions_summary when Redis returns null", async () => {
       redisMockState.getReturn = null
-      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor" }))
       const body = await res.json()
       expect(body.dynamicVariables.previous_sessions_summary).toBeUndefined()
     })
 
     it("omits summary when Redis record has empty transcript_summary", async () => {
       redisMockState.getReturn = JSON.stringify({ transcript_summary: "", call_successful: false, conversation_id: "c1", timestamp: 0 })
-      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor" }))
       const body = await res.json()
       expect(body.dynamicVariables.previous_sessions_summary).toBeUndefined()
     })
 
     it("omits summary gracefully when Redis throws", async () => {
       redisMockState.getReturn = new Error("Redis connection refused")
-      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor" }))
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.dynamicVariables.previous_sessions_summary).toBeUndefined()
     })
   })
 
+  describe("authentication", () => {
+    it("returns 401 when user is not authenticated", async () => {
+      clerkMockState.userId = null
+      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor" }))
+      expect(res.status).toBe(401)
+    })
+  })
+
   describe("invalid requests — 400 responses", () => {
     it("rejects unknown context value", async () => {
-      const res = await GET(makeReq({ context: "unknown_ctx", profile: "calm_mentor", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "unknown_ctx", profile: "calm_mentor" }))
       expect(res.status).toBe(400)
     })
 
     it("rejects unknown profile value", async () => {
-      const res = await GET(makeReq({ context: "new_goal", profile: "robot_voice", userId: VALID_USER_ID }))
-      expect(res.status).toBe(400)
-    })
-
-    it("rejects non-UUID userId", async () => {
-      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor", userId: "not-a-uuid" }))
+      const res = await GET(makeReq({ context: "new_goal", profile: "robot_voice" }))
       expect(res.status).toBe(400)
     })
 
@@ -163,19 +180,19 @@ describe("GET /api/conversation/token", () => {
   describe("server misconfiguration", () => {
     it("returns 500 when ELEVENLABS_API_KEY is missing", async () => {
       delete process.env.ELEVENLABS_API_KEY
-      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor" }))
       expect(res.status).toBe(500)
     })
 
     it("returns 502 when ElevenLabs API returns non-200", async () => {
       vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Unauthorized", { status: 401 })))
-      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor" }))
       expect(res.status).toBe(502)
     })
 
     it("returns 503 when ElevenLabs fetch throws a network error", async () => {
       vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("ECONNREFUSED")))
-      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor", userId: VALID_USER_ID }))
+      const res = await GET(makeReq({ context: "new_goal", profile: "calm_mentor" }))
       expect(res.status).toBe(503)
     })
   })

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 import { getRedisClient } from "@/lib/redis"
 import { TONE_CONFIGS } from "@/lib/constants"
@@ -8,12 +9,17 @@ import type { ToneProfile, UserSessionRecord } from "@/lib/types"
 const QuerySchema = z.object({
   context: z.enum(["new_goal", "progress_update"]),
   profile: z.enum(["calm_mentor", "hype_coach", "gentle_guide"]),
-  userId: z.string().uuid(),
   todoId: z.string().optional(),
 })
 
 /* ─── Route handler ──────────────────────────────────────── */
 export async function GET(req: NextRequest) {
+  /* Auth gate */
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   /* 3.1: Validate params */
   const raw = Object.fromEntries(req.nextUrl.searchParams)
   const parsed = QuerySchema.safeParse(raw)
@@ -23,7 +29,7 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     )
   }
-  const { context, profile, userId, todoId } = parsed.data
+  const { context, profile, todoId } = parsed.data
   const toneConfig = TONE_CONFIGS[profile as ToneProfile]
 
   /* 3.1: Fetch WebRTC token from ElevenLabs */

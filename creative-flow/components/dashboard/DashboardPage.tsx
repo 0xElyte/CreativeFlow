@@ -1,5 +1,6 @@
 "use client"
 
+import { useUser } from "@clerk/nextjs"
 import RecentFlows from "./RecentFlows"
 import VoicePanel from "@/components/voice/VoicePanel"
 import { useStore } from "@/lib/store"
@@ -13,6 +14,7 @@ function greeting(): string {
 
 export default function DashboardPage() {
   const flows = useStore((s) => s.tasks)
+  const { user } = useUser()
 
   return (
     <div
@@ -31,7 +33,7 @@ export default function DashboardPage() {
               color: "var(--cf-text-1)",
             }}
           >
-            {greeting()}, Alex.
+            {greeting()}, {user?.firstName ?? "there"}.
             <br />
             Ready to create?
           </h1>

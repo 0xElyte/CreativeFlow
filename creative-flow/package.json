@@ -12,6 +12,7 @@
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.2.4",
     "@elevenlabs/react": "^1.2.0",
     "framer-motion": "^12.38.0",
     "idb": "^8.0.3",
