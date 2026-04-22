@@ -3,7 +3,9 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { TONE_CONFIGS } from "@/lib/constants"
-import type { ToneProfile } from "@/lib/types"
+import { useStore } from "@/lib/store"
+import StoreHydrationProvider from "@/components/providers/StoreHydrationProvider"
+import ElevenLabsProvider from "@/components/providers/ElevenLabsProvider"
 
 /* ─── Inline SVG icons ───────────────────────────────────── */
 function IconGrid() {
@@ -75,12 +77,10 @@ const NAV_ITEMS = [
   { href: "/profile",  label: "Profile",   icon: IconUser   },
 ]
 
-// Mock: active tone profile (will come from store in Task 2)
-const ACTIVE_TONE: ToneProfile = "calm_mentor"
-
-/* ─── Component ──────────────────────────────────────────── */
-export default function AppShell({ children }: { children: React.ReactNode }) {
+/* ─── Shell inner (uses hooks, must be inside providers) ─── */
+function ShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const toneProfile = useStore((s) => s.audio.toneProfile)
 
   return (
     <div className="h-full flex flex-col" style={{ background: "var(--cf-bg)" }}>
@@ -116,7 +116,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             className="text-sm font-medium"
             style={{ color: "var(--cf-text-inv-2)" }}
           >
-            {TONE_CONFIGS[ACTIVE_TONE].label}
+            {TONE_CONFIGS[toneProfile].label}
           </span>
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold"
@@ -173,5 +173,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
+  )
+}
+
+/* ─── Public export: wraps providers around ShellInner ───── */
+export default function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <ElevenLabsProvider>
+      <StoreHydrationProvider>
+        <ShellInner>{children}</ShellInner>
+      </StoreHydrationProvider>
+    </ElevenLabsProvider>
   )
 }
