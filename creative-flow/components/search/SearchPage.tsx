@@ -193,9 +193,16 @@ export default function SearchPage() {
             className="flex flex-col items-center justify-center gap-3 py-20 text-center"
             style={{ color: "var(--cf-text-3)" }}
           >
-            <span className="text-3xl" aria-hidden>🔍</span>
-            <p className="text-sm max-w-[28ch]">
-              Type above to search across {tasks.length} flow{tasks.length !== 1 ? "s" : ""}.
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden style={{ opacity: 0.45 }}>
+              <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M15.5 15.5L21 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M8 10.5h5M10.5 8v5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <p className="text-sm font-medium" style={{ color: "var(--cf-text-2)" }}>
+              Start typing to search…
+            </p>
+            <p className="text-xs" style={{ maxWidth: "28ch" }}>
+              Search across {tasks.length} flow{tasks.length !== 1 ? "s" : ""} by goal, domain, or step.
             </p>
           </motion.div>
         ) : results.length === 0 ? (
@@ -206,8 +213,17 @@ export default function SearchPage() {
             className="flex flex-col items-center justify-center gap-3 py-20 text-center"
             style={{ color: "var(--cf-text-3)" }}
           >
-            <span className="text-3xl" aria-hidden>😶</span>
-            <p className="text-sm">No flows match &ldquo;{deferred}&rdquo;</p>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden style={{ opacity: 0.45 }}>
+              <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M15.5 15.5L21 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M8.5 8.5l4 4M12.5 8.5l-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <p className="text-sm font-medium" style={{ color: "var(--cf-text-2)" }}>
+              No results found
+            </p>
+            <p className="text-xs" style={{ maxWidth: "28ch" }}>
+              No flows match &ldquo;{deferred.trim()}&rdquo;. Try a different keyword.
+            </p>
           </motion.div>
         ) : (
           <motion.div
