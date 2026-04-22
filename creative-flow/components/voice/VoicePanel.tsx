@@ -7,7 +7,104 @@ import FeedbackButtons from "./FeedbackButtons"
 import { useVoiceSession } from "@/hooks/useVoiceSession"
 import { useClientTools } from "@/hooks/useClientTools"
 import { useStore } from "@/lib/store"
+import type { SessionContext } from "@/hooks/useVoiceSession"
 import type { VoiceState } from "@/lib/types"
+
+/* ─── Mic permission modal (8.5) ─────────────────────────── */
+function MicPermissionModal({ onDismiss }: { onDismiss: () => void }) {
+  // Detect browser for specific guidance
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""
+  const isChrome = /Chrome/.test(ua) && !/Edg/.test(ua)
+  const isFirefox = /Firefox/.test(ua)
+  const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua)
+
+  const steps = isChrome
+    ? ["Click the lock icon in the address bar", 'Set "Microphone" to Allow', "Reload the page"]
+    : isFirefox
+    ? ["Click the lock icon in the address bar", 'Choose "Connection Secure"', 'Under "Permissions", allow Microphone', "Reload the page"]
+    : isSafari
+    ? ["Open Safari → Settings for This Website", 'Set "Microphone" to Allow', "Reload the page"]
+    : ["Open your browser's site settings", "Allow microphone access", "Reload the page"]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: "oklch(0% 0 0 / 0.6)", backdropFilter: "blur(4px)" }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mic-modal-title"
+    >
+      <motion.div
+        initial={{ scale: 0.94, y: 16 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.94, y: 16 }}
+        transition={{ duration: 0.22 }}
+        className="flex flex-col gap-5 rounded-2xl p-7 max-w-sm w-full"
+        style={{
+          background: "var(--cf-card)",
+          border: "1.5px solid var(--cf-card-border)",
+          boxShadow: "0 8px 40px oklch(0% 0 0 / 0.25)",
+        }}
+      >
+        <div className="flex items-start gap-4">
+          <span className="text-3xl" aria-hidden>🎙️</span>
+          <div className="flex flex-col gap-1">
+            <h2
+              id="mic-modal-title"
+              className="text-base font-semibold"
+              style={{ color: "var(--cf-text-1)" }}
+            >
+              Microphone access denied
+            </h2>
+            <p className="text-sm" style={{ color: "var(--cf-text-3)" }}>
+              CreativeFlow needs your mic to hear your goals. Here&apos;s how to enable it:
+            </p>
+          </div>
+        </div>
+
+        <ol className="flex flex-col gap-2 pl-0 list-none">
+          {steps.map((step, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <span
+                className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
+                style={{ background: "var(--cf-amber)", color: "oklch(18% 0.01 55)" }}
+              >
+                {i + 1}
+              </span>
+              <span className="text-sm" style={{ color: "var(--cf-text-2)" }}>
+                {step}
+              </span>
+            </li>
+          ))}
+        </ol>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => window.location.reload()}
+            className="flex-1 rounded-xl py-2.5 text-sm font-semibold"
+            style={{ background: "var(--cf-amber)", color: "oklch(18% 0.01 55)" }}
+          >
+            Reload now
+          </button>
+          <button
+            onClick={onDismiss}
+            className="rounded-xl px-4 py-2.5 text-sm"
+            style={{
+              background: "var(--cf-surface)",
+              color: "var(--cf-text-3)",
+              border: "1px solid var(--cf-card-border)",
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
 
 function MicIcon() {
   return (
@@ -39,13 +136,31 @@ const STATE_HINT: Record<VoiceState, string> = {
   speaking:   "Your assistant is responding",
 }
 
-export default function VoicePanel() {
+/* ─── Props (8.1) ────────────────────────────────────────── */
+interface VoicePanelProps {
+  /**
+   * Which conversation context to open.
+   * Defaults to "new_goal" (dashboard).
+   * Pass "progress_update" from the Projects page.
+   */
+  context?: SessionContext
+  /**
+   * When context is "progress_update", the id of the active TodoItem
+   * whose steps the agent should reference.
+   */
+  activeTodoId?: string
+}
+
+export default function VoicePanel({ context = "new_goal", activeTodoId }: VoicePanelProps) {
   const session = useVoiceSession()
   const voiceState = useStore((s) => s.session.voiceState)
   const transcript = useStore((s) => s.session.transcript)
 
   // 4.4: Register decompose_goal + update_steps client tools
   const { lastError, clearError, canRetryDecompose } = useClientTools()
+
+  // Mic permission denied state (8.5)
+  const [micDenied, setMicDenied] = useState(false)
 
   // Fallback text input state
   const [fallbackText, setFallbackText] = useState("")
@@ -56,8 +171,18 @@ export default function VoicePanel() {
     if (session.showFallback) inputRef.current?.focus()
   }, [session.showFallback])
 
-  const handlePress = () => {
-    void session.start("new_goal")
+  // 8.2 / 8.3: pass context + todoId to session.start
+  const handlePress = async () => {
+    try {
+      // Probe mic permission before starting (8.5)
+      await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "NotAllowedError") {
+        setMicDenied(true)
+        return
+      }
+    }
+    void session.start(context, activeTodoId)
   }
 
   const handleRelease = () => {
@@ -83,7 +208,13 @@ export default function VoicePanel() {
   }
 
   return (
-    <aside
+    <>
+      {/* 8.5: Mic permission denied modal */}
+      <AnimatePresence>
+        {micDenied && <MicPermissionModal onDismiss={() => setMicDenied(false)} />}
+      </AnimatePresence>
+
+      <aside
       className="flex flex-col items-center gap-8 rounded-2xl overflow-hidden"
       style={{
         width: 300,
@@ -256,6 +387,7 @@ export default function VoicePanel() {
         )}
       </AnimatePresence>
     </aside>
+    </>
   )
 }
 

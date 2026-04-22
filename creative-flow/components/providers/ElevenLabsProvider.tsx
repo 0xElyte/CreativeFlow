@@ -23,7 +23,20 @@ export default function ElevenLabsProvider({
     <ConversationProvider
       onMessage={(msg) => {
         if (msg.role === "user") {
+          // 10.1: first user transcript = STT first token
+          if (!performance.getEntriesByName("cf:stt_first_token", "mark").length ||
+            performance.getEntriesByName("cf:session_start", "mark").at(-1)!.startTime >
+            (performance.getEntriesByName("cf:stt_first_token", "mark").at(-1)?.startTime ?? 0)) {
+            performance.mark("cf:stt_first_token")
+            performance.measure("cf:stt_latency", "cf:session_start", "cf:stt_first_token")
+          }
           setTranscript(msg.message)
+        } else if (msg.role === "agent") {
+          // 10.1: first agent message = agent_response / tts_start
+          performance.mark("cf:tts_start")
+          if (performance.getEntriesByName("cf:stt_first_token", "mark").length) {
+            performance.measure("cf:agent_response_latency", "cf:stt_first_token", "cf:tts_start")
+          }
         }
       }}
       onModeChange={({ mode }) => {

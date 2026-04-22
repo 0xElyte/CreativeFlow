@@ -92,6 +92,9 @@ export function useVoiceSession(): UseVoiceSessionReturn {
 
       const { conversationToken, dynamicVariables } = tokenData
 
+      // 10.1: mark session start for performance measurement
+      performance.mark("cf:session_start")
+
       startSession({
         conversationToken,
         dynamicVariables,
@@ -101,6 +104,8 @@ export function useVoiceSession(): UseVoiceSessionReturn {
         },
         onDisconnect: () => {
           setAudioPlaying(false)
+          performance.mark("cf:session_end")
+          performance.measure("cf:session_duration", "cf:session_start", "cf:session_end")
         },
         onError: (msg) => {
           failCountRef.current += 1
