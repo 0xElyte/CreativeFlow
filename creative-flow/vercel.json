@@ -4,12 +4,6 @@
   "devCommand": "next dev",
   "installCommand": "npm install",
   "regions": ["iad1"],
-  "env": {
-    "REDIS_URL": "@redis_url",
-    "ELEVENLABS_API_KEY": "@elevenlabs_api_key",
-    "ELEVENLABS_AGENT_ID": "@elevenlabs_agent_id",
-    "ELEVENLABS_WEBHOOK_SECRET": "@elevenlabs_webhook_secret"
-  },
   "headers": [
     {
       "source": "/api/(.*)",
