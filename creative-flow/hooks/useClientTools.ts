@@ -1,36 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { z } from "zod"
 import { useConversationClientTool } from "@elevenlabs/react"
 import { useStore } from "@/lib/store"
+import { DecomposeGoalSchema, UpdateStepsSchema } from "@/lib/schemas"
 import type { TodoItem, TodoStep } from "@/lib/types"
-
-/* ─── Zod schemas ────────────────────────────────────────── */
-
-const StepSchema = z.object({
-  text: z.string().min(3),
-  domainTag: z.string().min(1),
-  estimatedMinutes: z.number().int().min(1).max(240),
-})
-
-const DecomposeGoalSchema = z.object({
-  goal: z.string().min(5),
-  domain: z.string().min(1),
-  steps: z.array(StepSchema).min(2).max(6),
-})
-
-const UpdateStepsSchema = z.object({
-  results: z
-    .array(
-      z.object({
-        stepId: z.string().min(1),
-        status: z.enum(["completed", "clarification_needed"]),
-        query: z.string().optional(),
-      })
-    )
-    .min(1),
-})
 
 /* ─── Return shape ───────────────────────────────────────── */
 

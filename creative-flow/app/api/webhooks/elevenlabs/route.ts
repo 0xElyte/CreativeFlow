@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createHmac, timingSafeEqual } from "crypto"
-import Redis from "ioredis"
+import { getRedisClient } from "@/lib/redis"
 import type { UserSessionRecord } from "@/lib/types"
-
-/* ─── Redis singleton ────────────────────────────────────── */
-let redis: Redis | null = null
-function getRedis(): Redis {
-  if (!redis) {
-    redis = new Redis(process.env.REDIS_URL!, {
-      maxRetriesPerRequest: 1,
-      lazyConnect: true,
-    })
-  }
-  return redis
-}
 
 /* ─── Signature validation ───────────────────────────────── */
 /**
@@ -111,7 +99,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const kv = getRedis()
+    const kv = getRedisClient()
     const TTL_SECONDS = 90 * 24 * 60 * 60
     await kv.set(
       `session:${user_id}:latest`,

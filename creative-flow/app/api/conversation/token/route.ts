@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import Redis from "ioredis"
+import { getRedisClient } from "@/lib/redis"
 import { TONE_CONFIGS } from "@/lib/constants"
 import type { ToneProfile, UserSessionRecord } from "@/lib/types"
 
@@ -11,18 +11,6 @@ const QuerySchema = z.object({
   userId: z.string().uuid(),
   todoId: z.string().optional(),
 })
-
-/* ─── Redis singleton (server-side only) ─────────────────── */
-let redis: Redis | null = null
-function getRedis(): Redis {
-  if (!redis) {
-    redis = new Redis(process.env.REDIS_URL!, {
-      maxRetriesPerRequest: 1,
-      lazyConnect: true,
-    })
-  }
-  return redis
-}
 
 /* ─── Route handler ──────────────────────────────────────── */
 export async function GET(req: NextRequest) {
@@ -72,7 +60,7 @@ export async function GET(req: NextRequest) {
   /* 3.9: Fetch previous session summary from Redis */
   let previousSessionsSummary: string | undefined
   try {
-    const kv = getRedis()
+    const kv = getRedisClient()
     const record = await kv.get(`session:${userId}:latest`)
     if (record) {
       const parsed = JSON.parse(record) as UserSessionRecord
