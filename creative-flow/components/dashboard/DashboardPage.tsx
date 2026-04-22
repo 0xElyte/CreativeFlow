@@ -3,7 +3,6 @@
 import RecentFlows from "./RecentFlows"
 import VoicePanel from "@/components/voice/VoicePanel"
 import { useStore } from "@/lib/store"
-import { MOCK_FLOWS } from "@/lib/mock-data"
 
 function greeting(): string {
   const h = new Date().getHours()
@@ -13,9 +12,7 @@ function greeting(): string {
 }
 
 export default function DashboardPage() {
-  const storeTasks = useStore((s) => s.tasks)
-  // Show store tasks if any exist, otherwise fall back to mock data for demo
-  const flows = storeTasks.length > 0 ? storeTasks : MOCK_FLOWS
+  const flows = useStore((s) => s.tasks)
 
   return (
     <div

@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useStore } from "@/lib/store"
-import { MOCK_FLOWS } from "@/lib/mock-data"
 import { TONE_CONFIGS, DOMAIN_LABELS } from "@/lib/constants"
 import TodoCard from "@/components/dashboard/TodoCard"
 import StepList from "@/components/dashboard/StepList"
@@ -106,8 +105,7 @@ function FlowDetail({
 
 /* ─── Projects page ──────────────────────────────────────── */
 export default function ProjectsPage() {
-  const storeTasks = useStore((s) => s.tasks)
-  const flows = storeTasks.length > 0 ? storeTasks : MOCK_FLOWS
+  const flows = useStore((s) => s.tasks)
 
   const active = flows.filter((f) => f.status === "active")
   const completed = flows.filter((f) => f.status === "completed")
