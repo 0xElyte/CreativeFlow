@@ -18,7 +18,9 @@ const containerVariants = {
 }
 
 export default function RecentFlows({ flows }: RecentFlowsProps) {
+  const draft = flows.filter((f) => f.status === "draft")
   const active = flows.filter((f) => f.status === "active")
+  const visible = [...draft, ...active]
 
   return (
     <section aria-labelledby="recent-flows-heading">
@@ -30,7 +32,7 @@ export default function RecentFlows({ flows }: RecentFlowsProps) {
         Recent Flows
       </h2>
 
-      {active.length === 0 ? (
+      {visible.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center gap-3 rounded-2xl py-16 px-8 text-center"
           style={{
@@ -65,7 +67,7 @@ export default function RecentFlows({ flows }: RecentFlowsProps) {
           animate="visible"
           role="list"
         >
-          {active.map((flow) => (
+          {visible.map((flow) => (
             <li key={flow.id} role="listitem">
               <TodoCard todo={flow} />
             </li>

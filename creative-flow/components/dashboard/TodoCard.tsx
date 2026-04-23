@@ -40,32 +40,53 @@ export default function TodoCard({ todo, onClick }: TodoCardProps) {
   const track = trackColorForTone(todo)
   const domainLabel = DOMAIN_LABELS[todo.domain] ?? todo.domain
   const isComplete = todo.status === "completed"
+  const isDraft = todo.status === "draft"
 
   return (
     <motion.article
       layout
       initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ opacity: isDraft ? 0.7 : 1, y: 0 }}
       transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
-      onClick={() => onClick?.(todo.id)}
-      className="relative flex flex-col gap-5 rounded-2xl p-6 cursor-pointer select-none"
+      onClick={() => !isDraft && onClick?.(todo.id)}
+      className="relative flex flex-col gap-5 rounded-2xl p-6 select-none"
       style={{
         background: "var(--cf-card)",
-        border: "1.5px solid var(--cf-card-border)",
+        border: isDraft
+          ? "1.5px dashed var(--cf-card-border)"
+          : "1.5px solid var(--cf-card-border)",
         boxShadow: "0 2px 8px oklch(0% 0 0 / 0.04), 0 1px 2px oklch(0% 0 0 / 0.06)",
+        cursor: isDraft ? "default" : "pointer",
       }}
-      whileHover={{
-        y: -2,
-        boxShadow:
-          "0 8px 24px oklch(0% 0 0 / 0.08), 0 2px 6px oklch(0% 0 0 / 0.06)",
-        transition: { duration: 0.2 },
-      }}
-      whileTap={{ scale: 0.985 }}
-      role="button"
-      tabIndex={0}
-      aria-label={`Open ${todo.goal}`}
-      onKeyDown={(e) => e.key === "Enter" && onClick?.(todo.id)}
+      whileHover={
+        isDraft
+          ? {}
+          : {
+              y: -2,
+              boxShadow:
+                "0 8px 24px oklch(0% 0 0 / 0.08), 0 2px 6px oklch(0% 0 0 / 0.06)",
+              transition: { duration: 0.2 },
+            }
+      }
+      whileTap={isDraft ? {} : { scale: 0.985 }}
+      role={isDraft ? "status" : "button"}
+      tabIndex={isDraft ? -1 : 0}
+      aria-label={isDraft ? `Awaiting confirmation: ${todo.goal}` : `Open ${todo.goal}`}
+      onKeyDown={(e) => !isDraft && e.key === "Enter" && onClick?.(todo.id)}
     >
+      {/* Draft awaiting confirmation badge */}
+      {isDraft && (
+        <span
+          className="absolute top-4 right-4 text-xs font-medium px-2 py-0.5 rounded-full"
+          style={{
+            background: "var(--cf-card-border)",
+            color: "var(--cf-text-3)",
+          }}
+        >
+          Awaiting confirmation
+        </span>
+      )}
+
       {/* Completed trophy badge */}
       {isComplete && (
         <span
