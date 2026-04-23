@@ -1,3 +1,11 @@
+# CreativeFlow
+
+**Live:** [https://creative-flow-labs.vercel.app](https://creative-flow-labs.vercel.app)
+
+A voice-first, AI-powered smart to-do list. Speak your goal — CreativeFlow breaks it into actionable steps using an ElevenLabs conversational AI agent and tracks your progress.
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
