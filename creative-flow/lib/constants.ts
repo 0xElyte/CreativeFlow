@@ -2,14 +2,14 @@ import type { ToneConfig, ToneProfile } from './types'
 
 export const TONE_CONFIGS: Record<ToneProfile, ToneConfig> = {
   calm_mentor: {
-    voiceId: '',
+    voiceId: 'GLSWsaquVBsIPLPPRi2s',
     label: 'Calm Mentor',
     description: 'Measured, wise, grounding',
     accentVar: '--cf-amber',
     accentColor: 'oklch(73% 0.17 55)',
   },
   hype_coach: {
-    voiceId: '',
+    voiceId: '1GCQiLWWVadqyDYY3CK9',
     label: 'Hype Coach',
     description: 'Energetic, motivating, bold',
     accentVar: '--cf-coral',
