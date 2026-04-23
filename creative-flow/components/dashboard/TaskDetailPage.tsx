@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { useStore } from "@/lib/store"
 import { TONE_CONFIGS, DOMAIN_LABELS } from "@/lib/constants"
 import ActionTile from "./ActionTile"
+import VoicePanel from "@/components/voice/VoicePanel"
 
 function completionPercent(done: number, total: number): number {
   if (total === 0) return 0
@@ -48,7 +49,9 @@ export default function TaskDetailPage({ taskId }: TaskDetailPageProps) {
       className="flex h-full overflow-hidden"
       style={{ background: "var(--cf-surface)" }}
     >
-      <div className="flex-1 min-w-0 overflow-y-auto px-8 py-10 max-w-2xl mx-auto w-full">
+      {/* ── Main content ── */}
+      <div className="flex-1 min-w-0 overflow-y-auto px-8 py-10">
+        <div className="max-w-2xl mx-auto w-full">
 
         {/* Back */}
         <button
@@ -138,6 +141,15 @@ export default function TaskDetailPage({ taskId }: TaskDetailPageProps) {
           ))}
         </div>
 
+        </div>{/* end max-w-2xl */}
+      </div>
+
+      {/* ── Voice panel (edit/update mode) ── */}
+      <div
+        className="flex items-start justify-center py-10 px-6 flex-shrink-0"
+        style={{ width: 348 }}
+      >
+        <VoicePanel context="progress_update" activeTodoId={taskId} />
       </div>
     </div>
   )
