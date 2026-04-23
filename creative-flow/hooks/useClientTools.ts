@@ -139,17 +139,38 @@ export function useClientTools(onComplete?: () => void): UseClientToolsReturn {
       // Read fresh tasks — closure is stale
       const { tasks, completeStep, requestClarification } = useStore.getState()
 
+      const notFound: string[] = []
+
       for (const item of result.data.results) {
+        // Normalize stepId: agent may wrap the UUID in brackets e.g. "[uuid]"
+        const cleanStepId = item.stepId.replace(/^\[|\]$/g, "").trim()
+
         const ownerTask = tasks.find((t) =>
-          t.steps.some((step) => step.id === item.stepId)
+          t.steps.some((step) => step.id === cleanStepId)
         )
-        if (!ownerTask) continue
+
+        if (!ownerTask) {
+          console.warn(
+            "[update_steps] no task found for stepId:",
+            item.stepId,
+            "→ cleaned:",
+            cleanStepId,
+            "| available step IDs:",
+            tasks.flatMap((t) => t.steps.map((s) => s.id))
+          )
+          notFound.push(cleanStepId)
+          continue
+        }
 
         if (item.status === "completed") {
-          completeStep(ownerTask.id, item.stepId)
+          completeStep(ownerTask.id, cleanStepId)
         } else {
-          requestClarification(ownerTask.id, item.stepId, item.query ?? "Needs clarification")
+          requestClarification(ownerTask.id, cleanStepId, item.query ?? "Needs clarification")
         }
+      }
+
+      if (notFound.length > 0) {
+        return `Error: could not find steps with IDs: ${notFound.join(", ")}. Please check the step IDs from the steps list and try again.`
       }
 
       return "ok"
