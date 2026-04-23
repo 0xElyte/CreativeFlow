@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useConversationClientTool } from "@elevenlabs/react"
 import { useStore } from "@/lib/store"
 import { DecomposeGoalSchema, UpdateStepsSchema } from "@/lib/schemas"
@@ -22,23 +22,21 @@ export interface UseClientToolsReturn {
 /* ─── Hook ───────────────────────────────────────────────── */
 
 /**
- * Registers the `decompose_goal` and `update_steps` ElevenLabs client tools.
+ * Registers the `decompose_goal`, `confirm_goal` and `update_steps` ElevenLabs client tools.
  * Must be called in a component rendered inside <ConversationProvider>.
  * Tools are automatically unregistered on unmount.
+ *
+ * NOTE: callbacks passed to useConversationClientTool are registered once on
+ * mount and never re-executed with updated closure values. All mutable state
+ * is therefore read via useStore.getState() (always fresh) or a synced ref.
  */
 export function useClientTools(onComplete?: () => void): UseClientToolsReturn {
-  const addTask = useStore((s) => s.addTask)
-  const confirmTask = useStore((s) => s.confirmTask)
-  const discardDraft = useStore((s) => s.discardDraft)
-  const setPendingDraftId = useStore((s) => s.setPendingDraftId)
-  const pendingDraftId = useStore((s) => s.session.pendingDraftId)
-  const completeStep = useStore((s) => s.completeStep)
-  const requestClarification = useStore((s) => s.requestClarification)
-  const tasks = useStore((s) => s.tasks)
-  const toneProfile = useStore((s) => s.audio.toneProfile)
-
   const [lastError, setLastError] = useState<string | null>(null)
   const [canRetryDecompose, setCanRetryDecompose] = useState(false)
+
+  // Keep onComplete in a ref so the stale callback closure always calls the latest version
+  const onCompleteRef = useRef(onComplete)
+  useEffect(() => { onCompleteRef.current = onComplete }, [onComplete])
 
   /* ── 4.1: decompose_goal ─────────────────────────────── */
   useConversationClientTool(
@@ -53,7 +51,6 @@ export function useClientTools(onComplete?: () => void): UseClientToolsReturn {
         console.error("[decompose_goal] validation failed:", msg, "raw payload:", payload)
         setLastError(`Goal decomposition failed: ${msg}`)
         setCanRetryDecompose(true)
-        // Return "ok" anyway — returning an error string causes the agent to loop/retry
         return "ok"
       }
 
@@ -62,6 +59,8 @@ export function useClientTools(onComplete?: () => void): UseClientToolsReturn {
 
       const { goal, domain, steps } = result.data
       const now = Date.now()
+      // Read fresh store state — closure is stale
+      const { addTask, discardDraft, setPendingDraftId, session, audio } = useStore.getState()
 
       const task: TodoItem = {
         id: crypto.randomUUID(),
@@ -76,21 +75,19 @@ export function useClientTools(onComplete?: () => void): UseClientToolsReturn {
             status: "pending",
           })
         ),
-        // Draft: not shown in dashboard until the user confirms the plan
         status: "draft",
-        toneProfile,
+        toneProfile: audio.toneProfile,
         createdAt: now,
         updatedAt: now,
       }
 
-      addTask(task)
-      // If the user revised the plan, discard the previous draft
-      if (pendingDraftId) {
-        discardDraft(pendingDraftId)
+      // Discard any existing draft if the user revised the plan
+      if (session.pendingDraftId) {
+        discardDraft(session.pendingDraftId)
       }
+      addTask(task)
       setPendingDraftId(task.id)
       console.log("[decompose_goal] draft task created:", task.id, "goal:", goal)
-      // App owns ID creation — no need to expose taskId to the agent
       return "ok"
     }
   )
@@ -101,7 +98,9 @@ export function useClientTools(onComplete?: () => void): UseClientToolsReturn {
     async (_payload: unknown): Promise<string> => {
       console.log("[confirm_goal] called")
 
-      const taskId = pendingDraftId
+      const { confirmTask, setPendingDraftId, session } = useStore.getState()
+      const taskId = session.pendingDraftId
+
       if (!taskId) {
         console.error("[confirm_goal] no pending draft — decompose_goal may not have run yet")
         return "ok"
@@ -111,8 +110,8 @@ export function useClientTools(onComplete?: () => void): UseClientToolsReturn {
       setPendingDraftId(null)
       console.log("[confirm_goal] task promoted to active:", taskId)
 
-      // End the voice session — the goal is confirmed, nothing more to do
-      onComplete?.()
+      // End the voice session — goal is confirmed, nothing more to do
+      onCompleteRef.current?.()
 
       return "ok"
     }
@@ -137,22 +136,19 @@ export function useClientTools(onComplete?: () => void): UseClientToolsReturn {
 
       setLastError(null)
 
+      // Read fresh tasks — closure is stale
+      const { tasks, completeStep, requestClarification } = useStore.getState()
+
       for (const item of result.data.results) {
-        // Find the parent task that owns this step
         const ownerTask = tasks.find((t) =>
           t.steps.some((step) => step.id === item.stepId)
         )
         if (!ownerTask) continue
 
         if (item.status === "completed") {
-          // completeStep enforces no-revert (see store.ts)
           completeStep(ownerTask.id, item.stepId)
         } else {
-          requestClarification(
-            ownerTask.id,
-            item.stepId,
-            item.query ?? "Needs clarification"
-          )
+          requestClarification(ownerTask.id, item.stepId, item.query ?? "Needs clarification")
         }
       }
 
