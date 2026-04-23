@@ -18,11 +18,11 @@ export default function DashboardPage() {
 
   return (
     <div
-      className="flex h-full overflow-hidden"
+      className="flex flex-col md:flex-row md:h-full md:overflow-hidden pb-16 md:pb-0"
       style={{ background: "var(--cf-surface)" }}
     >
       {/* ── Main column ── */}
-      <div className="flex-1 min-w-0 overflow-y-auto px-10 py-10">
+      <div className="flex-1 min-w-0 px-4 py-6 md:overflow-y-auto md:px-10 md:py-10">
         {/* Greeting */}
         <header className="mb-10">
           <h1
@@ -49,10 +49,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Voice panel ── */}
-      <div
-        className="flex items-start justify-center py-10 px-6 flex-shrink-0"
-        style={{ width: 348 }}
-      >
+      <div className="flex items-start justify-center py-6 px-4 md:py-10 md:px-6 md:flex-shrink-0 w-full md:w-[348px]">
         <VoicePanel />
       </div>
     </div>

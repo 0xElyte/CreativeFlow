@@ -59,11 +59,11 @@ export default function TaskDetailPage({ taskId }: TaskDetailPageProps) {
 
   return (
     <div
-      className="flex h-full overflow-hidden"
+      className="flex flex-col md:flex-row md:h-full md:overflow-hidden pb-16 md:pb-0"
       style={{ background: "var(--cf-surface)" }}
     >
       {/* ── Main content ── */}
-      <div className="flex-1 min-w-0 overflow-y-auto px-8 py-10">
+      <div className="flex-1 min-w-0 px-4 py-6 md:overflow-y-auto md:px-8 md:py-10">
         <div className="max-w-2xl mx-auto w-full">
 
         {/* Back + Delete row */}
@@ -175,10 +175,7 @@ export default function TaskDetailPage({ taskId }: TaskDetailPageProps) {
       </div>
 
       {/* ── Voice panel (edit/update mode) ── */}
-      <div
-        className="flex items-start justify-center py-10 px-6 flex-shrink-0"
-        style={{ width: 348 }}
-      >
+      <div className="flex items-start justify-center py-6 px-4 md:py-10 md:px-6 md:flex-shrink-0 w-full md:w-[348px]">
         <VoicePanel context="progress_update" activeTodoId={taskId} />
       </div>
 

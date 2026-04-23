@@ -174,7 +174,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
           )}
           <button
             onClick={() => signOut({ redirectUrl: "/sign-in" })}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-150 cursor-pointer"
+            className="flex items-center gap-1.5 rounded-lg px-2 sm:px-3 py-1.5 text-sm font-medium transition-colors duration-150 cursor-pointer"
             style={{
               color: "var(--cf-text-inv-2)",
               background: "transparent",
@@ -197,9 +197,9 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 
       {/* ── Body: sidebar + content ── */}
       <div className="flex flex-1 min-h-0">
-        {/* Sidebar */}
+        {/* Sidebar - desktop only */}
         <nav
-          className="flex flex-col gap-1 flex-shrink-0 py-6 px-3"
+          className="hidden md:flex flex-col gap-1 flex-shrink-0 py-6 px-3"
           style={{
             width: 220,
             background: "var(--cf-bg)",
@@ -229,12 +229,41 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 
         {/* Main content area */}
         <main
-          className="flex-1 min-w-0 overflow-hidden rounded-tl-2xl"
+          className="flex-1 min-w-0 overflow-y-auto md:overflow-hidden md:rounded-tl-2xl"
           style={{ background: "var(--cf-surface)" }}
         >
           {children}
         </main>
       </div>
+
+      {/* ── Mobile bottom nav ── */}
+      <nav
+        className="flex md:hidden fixed bottom-0 left-0 right-0 z-40"
+        style={{
+          background: "var(--cf-bg)",
+          borderTop: "1px solid var(--cf-bg-border)",
+          height: 56,
+        }}
+        aria-label="Mobile navigation"
+      >
+        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href)
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors duration-150"
+              style={{
+                color: isActive ? "var(--cf-text-inv)" : "var(--cf-text-inv-2)",
+              }}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <Icon />
+              <span className="text-[10px] font-medium">{label}</span>
+            </Link>
+          )
+        })}
+      </nav>
     </div>
   )
 }

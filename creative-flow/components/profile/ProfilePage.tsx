@@ -73,7 +73,7 @@ export default function ProfilePage() {
 
   return (
     <div
-      className="h-full overflow-y-auto px-10 py-10"
+      className="h-full overflow-y-auto px-4 py-6 pb-16 md:px-10 md:py-10 md:pb-10"
       style={{ background: "var(--cf-surface)" }}
     >
       {/* Header */}

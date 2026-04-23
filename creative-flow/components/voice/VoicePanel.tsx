@@ -221,10 +221,8 @@ export default function VoicePanel({ context = "new_goal", activeTodoId }: Voice
       </AnimatePresence>
 
       <aside
-      className="flex flex-col items-center gap-8 rounded-2xl overflow-hidden"
+      className="flex flex-col items-center gap-8 rounded-2xl overflow-hidden w-full md:w-[300px]"
       style={{
-        width: 300,
-        flexShrink: 0,
         background: "var(--cf-card)",
         border: "1.5px solid var(--cf-card-border)",
         boxShadow: "0 4px 24px oklch(0% 0 0 / 0.04), 0 1px 4px oklch(0% 0 0 / 0.05)",
