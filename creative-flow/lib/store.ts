@@ -145,8 +145,6 @@ export const useStore = create<AppStore>((set) => ({
         ...s.session,
         voiceState,
         active: voiceState !== "idle",
-        // Clear pending draft when session ends
-        pendingDraftId: voiceState === "idle" ? null : s.session.pendingDraftId,
       },
     })),
 
