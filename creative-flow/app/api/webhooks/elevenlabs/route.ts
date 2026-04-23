@@ -51,7 +51,8 @@ interface PostCallEvent {
     conversation_id: string
     analysis?: {
       transcript_summary?: string
-      call_successful?: boolean
+      // ElevenLabs sends "success" | "failure" | "unknown" (string, not boolean)
+      call_successful?: string | boolean
     }
   }
 }
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
   // 3.8: Write UserSessionRecord to Redis with 90-day TTL
   const record: UserSessionRecord = {
     transcript_summary: analysis?.transcript_summary ?? "",
-    call_successful: analysis?.call_successful ?? false,
+    call_successful: analysis?.call_successful === "success" || analysis?.call_successful === true,
     conversation_id,
     timestamp: Date.now(),
   }
