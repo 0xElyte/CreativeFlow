@@ -157,7 +157,7 @@ export default function VoicePanel({ context = "new_goal", activeTodoId }: Voice
   const transcript = useStore((s) => s.session.transcript)
 
   // 4.4: Register decompose_goal + update_steps client tools
-  const { lastError, clearError, canRetryDecompose } = useClientTools()
+  const { lastError, clearError, canRetryDecompose } = useClientTools(session.stop)
 
   // Mic permission denied state (8.5)
   const [micDenied, setMicDenied] = useState(false)

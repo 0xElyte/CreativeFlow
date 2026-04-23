@@ -7,6 +7,8 @@ interface SessionSlice {
   voiceState: VoiceState
   transcript: string
   userId: string
+  /** taskId of a draft pending user confirmation; null when no draft is in flight */
+  pendingDraftId: string | null
 }
 
 interface AudioSlice {
@@ -43,6 +45,7 @@ export interface AppStore {
   // Session / voice actions
   setVoiceState: (state: VoiceState) => void
   setTranscript: (text: string) => void
+  setPendingDraftId: (id: string | null) => void
   setAudioPlaying: (playing: boolean, stepId?: string | null) => void
   setToneProfile: (profile: ToneProfile) => void
 
@@ -66,6 +69,7 @@ export const useStore = create<AppStore>((set) => ({
     voiceState: "idle",
     transcript: "",
     userId: "",
+    pendingDraftId: null,
   },
   tasks: [],
   audio: {
@@ -141,11 +145,16 @@ export const useStore = create<AppStore>((set) => ({
         ...s.session,
         voiceState,
         active: voiceState !== "idle",
+        // Clear pending draft when session ends
+        pendingDraftId: voiceState === "idle" ? null : s.session.pendingDraftId,
       },
     })),
 
   setTranscript: (transcript) =>
     set((s) => ({ session: { ...s.session, transcript } })),
+
+  setPendingDraftId: (pendingDraftId) =>
+    set((s) => ({ session: { ...s.session, pendingDraftId } })),
 
   setAudioPlaying: (playing, stepId = null) =>
     set((s) => ({

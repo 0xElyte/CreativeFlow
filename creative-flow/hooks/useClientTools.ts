@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useState } from "react"
 import { useConversationClientTool } from "@elevenlabs/react"
 import { useStore } from "@/lib/store"
 import { DecomposeGoalSchema, UpdateStepsSchema } from "@/lib/schemas"
@@ -26,10 +26,12 @@ export interface UseClientToolsReturn {
  * Must be called in a component rendered inside <ConversationProvider>.
  * Tools are automatically unregistered on unmount.
  */
-export function useClientTools(): UseClientToolsReturn {
+export function useClientTools(onComplete?: () => void): UseClientToolsReturn {
   const addTask = useStore((s) => s.addTask)
   const confirmTask = useStore((s) => s.confirmTask)
   const discardDraft = useStore((s) => s.discardDraft)
+  const setPendingDraftId = useStore((s) => s.setPendingDraftId)
+  const pendingDraftId = useStore((s) => s.session.pendingDraftId)
   const completeStep = useStore((s) => s.completeStep)
   const requestClarification = useStore((s) => s.requestClarification)
   const tasks = useStore((s) => s.tasks)
@@ -37,9 +39,6 @@ export function useClientTools(): UseClientToolsReturn {
 
   const [lastError, setLastError] = useState<string | null>(null)
   const [canRetryDecompose, setCanRetryDecompose] = useState(false)
-  // Holds the taskId of the most recent draft so confirm_goal works
-  // even when the agent omits the taskId from its payload.
-  const pendingDraftId = useRef<string | null>(null)
 
   /* ── 4.1: decompose_goal ─────────────────────────────── */
   useConversationClientTool(
@@ -86,10 +85,10 @@ export function useClientTools(): UseClientToolsReturn {
 
       addTask(task)
       // If the user revised the plan, discard the previous draft
-      if (pendingDraftId.current) {
-        discardDraft(pendingDraftId.current)
+      if (pendingDraftId) {
+        discardDraft(pendingDraftId)
       }
-      pendingDraftId.current = task.id
+      setPendingDraftId(task.id)
       console.log("[decompose_goal] draft task created:", task.id, "goal:", goal)
       // App owns ID creation — no need to expose taskId to the agent
       return "ok"
@@ -102,15 +101,19 @@ export function useClientTools(): UseClientToolsReturn {
     async (_payload: unknown): Promise<string> => {
       console.log("[confirm_goal] called")
 
-      const taskId = pendingDraftId.current
+      const taskId = pendingDraftId
       if (!taskId) {
         console.error("[confirm_goal] no pending draft — decompose_goal may not have run yet")
         return "ok"
       }
 
       confirmTask(taskId)
-      pendingDraftId.current = null
+      setPendingDraftId(null)
       console.log("[confirm_goal] task promoted to active:", taskId)
+
+      // End the voice session — the goal is confirmed, nothing more to do
+      onComplete?.()
+
       return "ok"
     }
   )
