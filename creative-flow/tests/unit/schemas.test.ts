@@ -41,6 +41,43 @@ describe("DecomposeGoalSchema", () => {
       expect(result.success).toBe(true)
     })
 
+    it("accepts 8 steps (new upper boundary)", () => {
+      const result = DecomposeGoalSchema.safeParse(makeDecomposePayload(8))
+      expect(result.success).toBe(true)
+    })
+
+    it("accepts short goal (agent may be terse)", () => {
+      const result = DecomposeGoalSchema.safeParse(makeDecomposePayload(2, { goal: "Run" }))
+      expect(result.success).toBe(true)
+    })
+
+    it("defaults domain to 'general' when missing", () => {
+      const payload = makeDecomposePayload(2)
+      const { domain: _, ...withoutDomain } = payload
+      const result = DecomposeGoalSchema.safeParse(withoutDomain)
+      expect(result.success).toBe(true)
+      if (result.success) expect(result.data.domain).toBe("general")
+    })
+
+    it("coerces non-integer estimatedMinutes by rounding", () => {
+      const result = DecomposeGoalSchema.safeParse(
+        makeDecomposePayload(2, {
+          steps: [makeStep({ estimatedMinutes: 5.5 }), makeStep()],
+        })
+      )
+      expect(result.success).toBe(true)
+      if (result.success) expect(result.data.steps[0].estimatedMinutes).toBe(6)
+    })
+
+    it("accepts estimatedMinutes up to 480", () => {
+      const result = DecomposeGoalSchema.safeParse(
+        makeDecomposePayload(2, {
+          steps: [makeStep({ estimatedMinutes: 480 }), makeStep()],
+        })
+      )
+      expect(result.success).toBe(true)
+    })
+
     it("accepts 4 steps (middle)", () => {
       const result = DecomposeGoalSchema.safeParse(makeDecomposePayload(4))
       expect(result.success).toBe(true)
@@ -65,34 +102,13 @@ describe("DecomposeGoalSchema", () => {
       expect(result.success).toBe(false)
     })
 
-    it("rejects 7 steps (above maximum)", () => {
-      const result = DecomposeGoalSchema.safeParse(makeDecomposePayload(7))
-      expect(result.success).toBe(false)
-    })
-
-    it("rejects goal shorter than 5 characters", () => {
-      const result = DecomposeGoalSchema.safeParse(makeDecomposePayload(2, { goal: "Run" }))
+    it("rejects 9 steps (above new maximum of 8)", () => {
+      const result = DecomposeGoalSchema.safeParse(makeDecomposePayload(9))
       expect(result.success).toBe(false)
     })
 
     it("rejects empty goal", () => {
       const result = DecomposeGoalSchema.safeParse(makeDecomposePayload(2, { goal: "" }))
-      expect(result.success).toBe(false)
-    })
-
-    it("rejects missing domain", () => {
-      const payload = makeDecomposePayload(2)
-      const { domain: _, ...withoutDomain } = payload
-      const result = DecomposeGoalSchema.safeParse(withoutDomain)
-      expect(result.success).toBe(false)
-    })
-
-    it("rejects step with text shorter than 3 chars", () => {
-      const result = DecomposeGoalSchema.safeParse(
-        makeDecomposePayload(2, {
-          steps: [makeStep({ text: "Go" }), makeStep()],
-        })
-      )
       expect(result.success).toBe(false)
     })
 
@@ -105,19 +121,10 @@ describe("DecomposeGoalSchema", () => {
       expect(result.success).toBe(false)
     })
 
-    it("rejects step with estimatedMinutes above 240", () => {
+    it("rejects step with estimatedMinutes above 480", () => {
       const result = DecomposeGoalSchema.safeParse(
         makeDecomposePayload(2, {
-          steps: [makeStep({ estimatedMinutes: 241 }), makeStep()],
-        })
-      )
-      expect(result.success).toBe(false)
-    })
-
-    it("rejects step with non-integer estimatedMinutes", () => {
-      const result = DecomposeGoalSchema.safeParse(
-        makeDecomposePayload(2, {
-          steps: [makeStep({ estimatedMinutes: 5.5 }), makeStep()],
+          steps: [makeStep({ estimatedMinutes: 481 }), makeStep()],
         })
       )
       expect(result.success).toBe(false)

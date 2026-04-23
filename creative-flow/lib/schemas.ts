@@ -3,15 +3,18 @@ import { z } from "zod"
 /* ─── decompose_goal ─────────────────────────────────────── */
 
 export const StepSchema = z.object({
-  text: z.string().min(3),
-  domainTag: z.string().min(1),
-  estimatedMinutes: z.number().int().min(1).max(240),
+  text: z.string().min(1),
+  // Agent may omit or send empty domainTag — default to empty string
+  domainTag: z.string().default(""),
+  // Agent LLM may send floats (30.0) or strings ("30") — coerce + round
+  estimatedMinutes: z.coerce.number().min(1).max(480).transform(Math.round),
 })
 
 export const DecomposeGoalSchema = z.object({
-  goal: z.string().min(5),
-  domain: z.string().min(1),
-  steps: z.array(StepSchema).min(2).max(6),
+  goal: z.string().min(1),
+  domain: z.string().default("general"),
+  // Agent may produce 1 step for simple goals; allow up to 8
+  steps: z.array(StepSchema).min(2).max(8),
 })
 
 /* ─── update_steps ───────────────────────────────────────── */

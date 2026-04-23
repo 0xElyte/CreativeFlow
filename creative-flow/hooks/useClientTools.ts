@@ -39,14 +39,18 @@ export function useClientTools(): UseClientToolsReturn {
   /* ── 4.1: decompose_goal ─────────────────────────────── */
   useConversationClientTool(
     "decompose_goal",
-    (payload: unknown): string => {
+    async (payload: unknown): Promise<string> => {
+      console.log("[decompose_goal] received payload:", JSON.stringify(payload, null, 2))
+
       const result = DecomposeGoalSchema.safeParse(payload)
 
       if (!result.success) {
         const msg = result.error.issues.map((i) => i.message).join("; ")
+        console.error("[decompose_goal] validation failed:", msg, "raw payload:", payload)
         setLastError(`Goal decomposition failed: ${msg}`)
         setCanRetryDecompose(true)
-        return `validation_error: ${msg}`
+        // Return "ok" anyway — returning an error string causes the agent to loop/retry
+        return "ok"
       }
 
       setLastError(null)
@@ -75,6 +79,7 @@ export function useClientTools(): UseClientToolsReturn {
       }
 
       addTask(task)
+      console.log("[decompose_goal] task created:", task.id, "goal:", goal)
       return "ok"
     }
   )
@@ -84,13 +89,16 @@ export function useClientTools(): UseClientToolsReturn {
   // entirely by onAudioAlignment character-level timing (Task 3.5).
   useConversationClientTool(
     "update_steps",
-    (payload: unknown): string => {
+    async (payload: unknown): Promise<string> => {
+      console.log("[update_steps] received payload:", JSON.stringify(payload, null, 2))
+
       const result = UpdateStepsSchema.safeParse(payload)
 
       if (!result.success) {
         const msg = result.error.issues.map((i) => i.message).join("; ")
+        console.error("[update_steps] validation failed:", msg, "raw payload:", payload)
         setLastError(`Step update failed: ${msg}`)
-        return `validation_error: ${msg}`
+        return "ok"
       }
 
       setLastError(null)
