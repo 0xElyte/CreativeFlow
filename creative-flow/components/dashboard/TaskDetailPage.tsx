@@ -1,7 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { useStore } from "@/lib/store"
 import { TONE_CONFIGS, DOMAIN_LABELS } from "@/lib/constants"
 import ActionTile from "./ActionTile"
@@ -19,6 +20,18 @@ interface TaskDetailPageProps {
 export default function TaskDetailPage({ taskId }: TaskDetailPageProps) {
   const router = useRouter()
   const todo = useStore((s) => s.tasks.find((t) => t.id === taskId))
+  const deleteTask = useStore((s) => s.deleteTask)
+  const [confirming, setConfirming] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    setDeleting(true)
+    deleteTask(taskId)
+    // Best-effort server delete — StoreHydrationProvider will also sync,
+    // but fire explicitly here for immediate consistency
+    await fetch(`/api/tasks/${taskId}`, { method: "DELETE" }).catch(() => {})
+    router.replace("/")
+  }
 
   if (!todo) {
     return (
@@ -53,20 +66,37 @@ export default function TaskDetailPage({ taskId }: TaskDetailPageProps) {
       <div className="flex-1 min-w-0 overflow-y-auto px-8 py-10">
         <div className="max-w-2xl mx-auto w-full">
 
-        {/* Back */}
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-sm mb-8 group"
-          style={{ color: "var(--cf-text-3)" }}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden
-            className="group-hover:-translate-x-0.5 transition-transform"
+        {/* Back + Delete row */}
+        <div className="flex items-center justify-between mb-8">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1.5 text-sm group"
+            style={{ color: "var(--cf-text-3)" }}
           >
-            <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5"
-              strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Back
-        </button>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden
+              className="group-hover:-translate-x-0.5 transition-transform"
+            >
+              <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5"
+                strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Back
+          </button>
+
+          <button
+            onClick={() => setConfirming(true)}
+            className="flex items-center gap-1.5 text-sm rounded-lg px-3 py-1.5 transition-colors"
+            style={{
+              color: "oklch(55% 0.2 25)",
+              background: "oklch(97% 0.01 25)",
+              border: "1px solid oklch(88% 0.05 25)",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+              <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1M3.5 3.5l.667 7.5a.5.5 0 0 0 .5.5h4.667a.5.5 0 0 0 .5-.5L10.5 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Delete task
+          </button>
+        </div>
 
         {/* Draft banner */}
         {isDraft && (
@@ -151,6 +181,67 @@ export default function TaskDetailPage({ taskId }: TaskDetailPageProps) {
       >
         <VoicePanel context="progress_update" activeTodoId={taskId} />
       </div>
+
+      {/* ── Delete confirmation modal ── */}
+      <AnimatePresence>
+        {confirming && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6"
+            style={{ background: "oklch(0% 0 0 / 0.5)", backdropFilter: "blur(4px)" }}
+          >
+            <motion.div
+              initial={{ scale: 0.94, y: 12 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.94, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col gap-5 rounded-2xl p-7 max-w-sm w-full"
+              style={{
+                background: "var(--cf-card)",
+                border: "1.5px solid var(--cf-card-border)",
+                boxShadow: "0 8px 40px oklch(0% 0 0 / 0.25)",
+              }}
+            >
+              <div className="flex flex-col gap-1.5">
+                <h2 className="text-base font-semibold" style={{ color: "var(--cf-text-1)" }}>
+                  Delete this task?
+                </h2>
+                <p className="text-sm" style={{ color: "var(--cf-text-3)" }}>
+                  &ldquo;{todo.goal}&rdquo; will be permanently removed and cannot be recovered.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-opacity"
+                  style={{
+                    background: "oklch(55% 0.2 25)",
+                    color: "#fff",
+                    opacity: deleting ? 0.6 : 1,
+                  }}
+                >
+                  {deleting ? "Deleting…" : "Yes, delete"}
+                </button>
+                <button
+                  onClick={() => setConfirming(false)}
+                  disabled={deleting}
+                  className="rounded-xl px-4 py-2.5 text-sm"
+                  style={{
+                    background: "var(--cf-surface)",
+                    color: "var(--cf-text-3)",
+                    border: "1px solid var(--cf-card-border)",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
