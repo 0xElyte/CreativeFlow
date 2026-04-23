@@ -16,7 +16,7 @@ export const TONE_CONFIGS: Record<ToneProfile, ToneConfig> = {
     accentColor: 'oklch(65% 0.22 30)',
   },
   gentle_guide: {
-    voiceId: '',
+    voiceId: 'YaarrMwvJxVUpjbZ2RpC',
     label: 'Gentle Guide',
     description: 'Soft, encouraging, patient',
     accentVar: '--cf-violet',
