@@ -3,13 +3,13 @@
 import { useEffect, useRef } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useStore } from "@/lib/store"
-import { hydrateFromDB, persistToDB } from "@/lib/db"
+import type { TodoItem } from "@/lib/types"
 
 /**
  * Handles app-wide initialisation:
- *  1. IndexedDB hydration — per-user DB, loaded once userId is known
+ *  1. Server (Redis) hydration — per-user tasks loaded once userId is known
  *  2. Reduced-motion detection — sync prefers-reduced-motion to store
- *  3. beforeunload persistence — flush tasks to the user's IndexedDB on tab close
+ *  3. Server sync — upserts changed/new non-draft tasks and deletes removed tasks
  *  4. Clears the task store when the user signs out
  */
 export default function StoreHydrationProvider({
@@ -23,21 +23,21 @@ export default function StoreHydrationProvider({
   const tasks = useStore((s) => s.tasks)
   const setToneProfile = useStore((s) => s.setToneProfile)
 
-  // Track userId in a ref so the beforeunload handler always has the latest value
-  const userIdRef = useRef<string | null>(null)
-  userIdRef.current = user?.id ?? null
+  // True once server hydration has completed — prevents syncing before the
+  // initial load overwrites what we just fetched.
+  const hydratedRef = useRef(false)
+  // Snapshot of the last-synced task list for diffing
+  const prevTasksRef = useRef<TodoItem[]>([])
 
-  // Hydrate per-user IndexedDB + tone profile once auth is ready
+  // Hydrate from Redis + restore tone profile once auth is ready
   useEffect(() => {
     if (!isLoaded) return
 
     if (!user?.id) {
-      // User signed out — clear tasks from the store
+      hydratedRef.current = false
       hydrateTasks([])
       return
     }
-
-    const userId = user.id
 
     // Restore persisted tone profile
     const savedTone = localStorage.getItem("cf_tone_profile")
@@ -49,8 +49,19 @@ export default function StoreHydrationProvider({
       setToneProfile(savedTone)
     }
 
-    // Load this user's tasks from their own IndexedDB
-    hydrateFromDB(userId).then(hydrateTasks)
+    // Fetch tasks from the server and hydrate the store.
+    // Keep any in-memory drafts (created this session) alongside server tasks.
+    fetch("/api/tasks")
+      .then((r) => r.json())
+      .then(({ tasks: serverTasks }: { tasks: TodoItem[] }) => {
+        const drafts = useStore.getState().tasks.filter((t) => t.status === "draft")
+        hydrateTasks([...serverTasks, ...drafts])
+        prevTasksRef.current = serverTasks
+        hydratedRef.current = true
+      })
+      .catch(() => {
+        hydratedRef.current = true // allow sync to proceed even if initial load fails
+      })
 
     // Reduced motion
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -60,16 +71,38 @@ export default function StoreHydrationProvider({
     return () => mq.removeEventListener("change", handler)
   }, [isLoaded, user?.id, hydrateTasks, setReducedMotion, setToneProfile])
 
-  // Persist tasks to the current user's DB on tab close
+  // Sync non-draft task changes to the server whenever the task list updates
   useEffect(() => {
-    const handleUnload = () => {
-      if (userIdRef.current) {
-        persistToDB(tasks, userIdRef.current)
-      }
+    if (!hydratedRef.current || !user?.id) return
+
+    const prev = prevTasksRef.current
+    const current = tasks
+
+    // Tasks that were added or updated (non-draft only)
+    const toUpsert = current.filter((task) => {
+      if (task.status === "draft") return false
+      const old = prev.find((t) => t.id === task.id)
+      return !old || old.updatedAt !== task.updatedAt || old.status !== task.status
+    })
+
+    // Tasks that were removed from the store
+    const toDelete = prev.filter((p) => !current.find((c) => c.id === p.id))
+
+    // Update snapshot before firing requests
+    prevTasksRef.current = current.filter((t) => t.status !== "draft")
+
+    for (const task of toUpsert) {
+      void fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(task),
+      })
     }
-    window.addEventListener("beforeunload", handleUnload)
-    return () => window.removeEventListener("beforeunload", handleUnload)
-  }, [tasks])
+
+    for (const task of toDelete) {
+      void fetch(`/api/tasks/${task.id}`, { method: "DELETE" })
+    }
+  }, [tasks, user?.id])
 
   return <>{children}</>
 }
