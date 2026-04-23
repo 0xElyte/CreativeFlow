@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import type { TodoItem } from "@/lib/types"
 import { TONE_CONFIGS, DOMAIN_LABELS } from "@/lib/constants"
@@ -34,6 +35,7 @@ function trackColorForTone(todo: TodoItem): string {
 }
 
 export default function TodoCard({ todo, onClick }: TodoCardProps) {
+  const router = useRouter()
   const pct = completionPercent(todo)
   const currentStep = activeStepText(todo)
   const accent = accentColorForTone(todo)
@@ -42,13 +44,19 @@ export default function TodoCard({ todo, onClick }: TodoCardProps) {
   const isComplete = todo.status === "completed"
   const isDraft = todo.status === "draft"
 
+  function handleClick() {
+    if (isDraft) return
+    onClick?.(todo.id)
+    router.push(`/tasks/${todo.id}`)
+  }
+
   return (
     <motion.article
       layout
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: isDraft ? 0.7 : 1, y: 0 }}
       transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
-      onClick={() => !isDraft && onClick?.(todo.id)}
+      onClick={() => handleClick()}
       className="relative flex flex-col gap-5 rounded-2xl p-6 select-none"
       style={{
         background: "var(--cf-card)",
@@ -72,7 +80,7 @@ export default function TodoCard({ todo, onClick }: TodoCardProps) {
       role={isDraft ? "status" : "button"}
       tabIndex={isDraft ? -1 : 0}
       aria-label={isDraft ? `Awaiting confirmation: ${todo.goal}` : `Open ${todo.goal}`}
-      onKeyDown={(e) => !isDraft && e.key === "Enter" && onClick?.(todo.id)}
+      onKeyDown={(e) => e.key === "Enter" && handleClick()}
     >
       {/* Draft awaiting confirmation badge */}
       {isDraft && (
