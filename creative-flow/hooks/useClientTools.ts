@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { z } from "zod"
 import { useConversationClientTool } from "@elevenlabs/react"
 import { useStore } from "@/lib/store"
@@ -37,6 +37,9 @@ export function useClientTools(): UseClientToolsReturn {
 
   const [lastError, setLastError] = useState<string | null>(null)
   const [canRetryDecompose, setCanRetryDecompose] = useState(false)
+  // Holds the taskId of the most recent draft so confirm_goal works
+  // even when the agent omits the taskId from its payload.
+  const pendingDraftId = useRef<string | null>(null)
 
   /* ── 4.1: decompose_goal ─────────────────────────────── */
   useConversationClientTool(
@@ -82,6 +85,7 @@ export function useClientTools(): UseClientToolsReturn {
       }
 
       addTask(task)
+      pendingDraftId.current = task.id
       console.log("[decompose_goal] draft task created:", task.id, "goal:", goal)
       // Return the taskId so the agent can reference it in confirm_goal
       return JSON.stringify({ taskId: task.id })
@@ -95,13 +99,17 @@ export function useClientTools(): UseClientToolsReturn {
       console.log("[confirm_goal] received payload:", JSON.stringify(payload, null, 2))
 
       const parsed = z.object({ taskId: z.string().min(1) }).safeParse(payload)
-      if (!parsed.success) {
-        console.error("[confirm_goal] missing taskId", payload)
+      // Fall back to the ref if the agent omitted taskId (common LLM behaviour)
+      const taskId = parsed.success ? parsed.data.taskId : pendingDraftId.current
+
+      if (!taskId) {
+        console.error("[confirm_goal] no taskId available — decompose_goal may not have run yet", payload)
         return "ok"
       }
 
-      confirmTask(parsed.data.taskId)
-      console.log("[confirm_goal] task promoted to active:", parsed.data.taskId)
+      confirmTask(taskId)
+      pendingDraftId.current = null
+      console.log("[confirm_goal] task promoted to active:", taskId)
       return "ok"
     }
   )
