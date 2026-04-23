@@ -36,6 +36,7 @@ export interface AppStore {
   // Task actions
   addTask: (item: TodoItem) => void
   confirmTask: (taskId: string) => void
+  discardDraft: (taskId: string) => void
   completeStep: (todoId: string, stepId: string) => void
   requestClarification: (todoId: string, stepId: string, query: string) => void
 
@@ -92,6 +93,11 @@ export const useStore = create<AppStore>((set) => ({
           ? { ...t, status: "active" as const, updatedAt: Date.now() }
           : t
       ),
+    })),
+
+  discardDraft: (taskId) =>
+    set((s) => ({
+      tasks: s.tasks.filter((t) => !(t.id === taskId && t.status === "draft")),
     })),
 
   completeStep: (todoId, stepId) =>

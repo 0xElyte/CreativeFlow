@@ -1,7 +1,6 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { z } from "zod"
 import { useConversationClientTool } from "@elevenlabs/react"
 import { useStore } from "@/lib/store"
 import { DecomposeGoalSchema, UpdateStepsSchema } from "@/lib/schemas"
@@ -30,6 +29,7 @@ export interface UseClientToolsReturn {
 export function useClientTools(): UseClientToolsReturn {
   const addTask = useStore((s) => s.addTask)
   const confirmTask = useStore((s) => s.confirmTask)
+  const discardDraft = useStore((s) => s.discardDraft)
   const completeStep = useStore((s) => s.completeStep)
   const requestClarification = useStore((s) => s.requestClarification)
   const tasks = useStore((s) => s.tasks)
@@ -85,25 +85,26 @@ export function useClientTools(): UseClientToolsReturn {
       }
 
       addTask(task)
+      // If the user revised the plan, discard the previous draft
+      if (pendingDraftId.current) {
+        discardDraft(pendingDraftId.current)
+      }
       pendingDraftId.current = task.id
       console.log("[decompose_goal] draft task created:", task.id, "goal:", goal)
-      // Return the taskId so the agent can reference it in confirm_goal
-      return JSON.stringify({ taskId: task.id })
+      // App owns ID creation — no need to expose taskId to the agent
+      return "ok"
     }
   )
 
   /* ── 4.2: confirm_goal ──────────────────────────────── */
   useConversationClientTool(
     "confirm_goal",
-    async (payload: unknown): Promise<string> => {
-      console.log("[confirm_goal] received payload:", JSON.stringify(payload, null, 2))
+    async (_payload: unknown): Promise<string> => {
+      console.log("[confirm_goal] called")
 
-      const parsed = z.object({ taskId: z.string().min(1) }).safeParse(payload)
-      // Fall back to the ref if the agent omitted taskId (common LLM behaviour)
-      const taskId = parsed.success ? parsed.data.taskId : pendingDraftId.current
-
+      const taskId = pendingDraftId.current
       if (!taskId) {
-        console.error("[confirm_goal] no taskId available — decompose_goal may not have run yet", payload)
+        console.error("[confirm_goal] no pending draft — decompose_goal may not have run yet")
         return "ok"
       }
 
