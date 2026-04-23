@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { z } from "zod"
 import { useConversationClientTool } from "@elevenlabs/react"
 import { useStore } from "@/lib/store"
 import { DecomposeGoalSchema, UpdateStepsSchema } from "@/lib/schemas"
@@ -28,6 +29,7 @@ export interface UseClientToolsReturn {
  */
 export function useClientTools(): UseClientToolsReturn {
   const addTask = useStore((s) => s.addTask)
+  const confirmTask = useStore((s) => s.confirmTask)
   const completeStep = useStore((s) => s.completeStep)
   const requestClarification = useStore((s) => s.requestClarification)
   const tasks = useStore((s) => s.tasks)
@@ -72,20 +74,40 @@ export function useClientTools(): UseClientToolsReturn {
             status: "pending",
           })
         ),
-        status: "active",
+        // Draft: not shown in dashboard until the user confirms the plan
+        status: "draft",
         toneProfile,
         createdAt: now,
         updatedAt: now,
       }
 
       addTask(task)
-      console.log("[decompose_goal] task created:", task.id, "goal:", goal)
+      console.log("[decompose_goal] draft task created:", task.id, "goal:", goal)
+      // Return the taskId so the agent can reference it in confirm_goal
+      return JSON.stringify({ taskId: task.id })
+    }
+  )
+
+  /* ── 4.2: confirm_goal ──────────────────────────────── */
+  useConversationClientTool(
+    "confirm_goal",
+    async (payload: unknown): Promise<string> => {
+      console.log("[confirm_goal] received payload:", JSON.stringify(payload, null, 2))
+
+      const parsed = z.object({ taskId: z.string().min(1) }).safeParse(payload)
+      if (!parsed.success) {
+        console.error("[confirm_goal] missing taskId", payload)
+        return "ok"
+      }
+
+      confirmTask(parsed.data.taskId)
+      console.log("[confirm_goal] task promoted to active:", parsed.data.taskId)
       return "ok"
     }
   )
 
   /* ── 4.3: update_steps ───────────────────────────────── */
-  // 4.2: highlight_step is NOT registered — step highlighting is handled
+  // highlight_step is NOT registered — step highlighting is handled
   // entirely by onAudioAlignment character-level timing (Task 3.5).
   useConversationClientTool(
     "update_steps",

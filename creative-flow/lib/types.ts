@@ -4,7 +4,7 @@ export type ToneProfile = 'calm_mentor' | 'hype_coach' | 'gentle_guide'
 
 export type StepStatus = 'pending' | 'completed' | 'clarification_needed' | 'unmatched'
 
-export type TodoStatus = 'active' | 'completed' | 'archived'
+export type TodoStatus = 'draft' | 'active' | 'completed' | 'archived'
 
 export type NavView = 'dashboard' | 'projects' | 'search' | 'profile'
 
