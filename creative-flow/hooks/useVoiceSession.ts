@@ -70,6 +70,12 @@ export function useVoiceSession(): UseVoiceSessionReturn {
   /* ── Start session ── */
   const start = useCallback(
     async (context: SessionContext, todoId?: string) => {
+      // Guard: never start a new session while one is already connecting or connected
+      if (status === "connecting" || status === "connected") {
+        console.warn("[useVoiceSession] start() called while session is", status, "— ignoring")
+        return
+      }
+
       setError(null)
 
       // Build token request URL (userId comes from Clerk auth server-side)

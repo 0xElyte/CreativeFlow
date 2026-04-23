@@ -129,11 +129,11 @@ function MicIcon() {
 }
 
 const STATE_HINT: Record<VoiceState, string> = {
-  idle:       "Hold the orb and speak your goal",
+  idle:       "Tap the orb to start talking",
   connecting: "Connecting to your assistant\u2026",
-  listening:  "Keep speaking — release when done",
+  listening:  "Listening\u2026 tap orb to end session",
   processing: "Thinking through your goal\u2026",
-  speaking:   "Your assistant is responding",
+  speaking:   "Your assistant is responding \u2014 tap orb to end",
 }
 
 /* ─── Props (8.1) ────────────────────────────────────────── */
@@ -173,6 +173,12 @@ export default function VoicePanel({ context = "new_goal", activeTodoId }: Voice
 
   // 8.2 / 8.3: pass context + todoId to session.start
   const handlePress = async () => {
+    // If a session is already active, pressing the orb ends it
+    if (voiceState !== "idle") {
+      session.stop()
+      return
+    }
+
     try {
       // Probe mic permission before starting (8.5)
       await navigator.mediaDevices.getUserMedia({ audio: true })
